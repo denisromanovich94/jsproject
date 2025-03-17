@@ -1,3 +1,116 @@
-@import 'normalize.css';
-@import 'variables.scss';
+@import "normalize.css";
+@import "variables.scss";
 
+body {
+    background: #000;
+
+    #app {
+        padding-top: 100px;
+        padding-bottom: 100px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        width: 100%;
+        height: auto;
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 60px;
+            border-radius: 20px;
+            width: 583px;
+            height: auto;
+            background: #1d1825;
+            padding: 50px;
+
+            .input-cont {
+                display: flex;
+                align-items: center;
+                gap: 15px;
+                width: 100%;
+                .input-text {
+                    border: 1px solid #9e78cf;
+                    border-radius: 10px;
+                    width: 100%;
+                    // height: 40px;
+                    background: transparent;
+                    font-weight: 400;
+                    font-size: 16px;
+                    color: #777;
+                    padding: 10px;
+                }
+                .btn-primary {
+                    border-radius: 10px;
+                    width: 40px;
+                    height: 40px;
+                    background: #9e78cf;
+                }
+            }
+
+            .tasks {
+                display: flex;
+                flex-direction: column;
+                align-items: start;
+                justify-content: start;
+                gap: 10px;
+                width: 100%;
+                .tasks__title {
+                    font-weight: 400;
+                    font-size: 16px;
+                    color: #fff;
+                }
+                .task__item {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    border-radius: 10px;
+                    max-width: 540px;
+                    height: auto;
+                    background: #15101c;
+                    width: 100%;
+                    padding: 20px;
+                    .task__text {
+                        font-weight: 400;
+                        font-size: 16px;
+                        color: #9e78cf;
+                    }
+
+                    .btn-cont {
+                        display: flex;
+                        gap: 8px;
+                        align-items: center;
+
+                        .task-btn {
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+
+                            background: transparent;
+                            border-radius: 5px;
+                            width: 30px;
+                            height: 30px;
+                        }
+                    }
+                }
+            }
+
+            .tasks.done-tasks {
+                .task__text.done-text {
+                    font-weight: 400;
+                    font-size: 16px;
+                    text-decoration: line-through;
+                    color: #78cfb0;
+                }
+            }
+        }
+    }
+}
+.none {
+    display: none !important;
+}
+.task-btn {
+
+    svg {
+        pointer-events: none;
+    }
+}
