@@ -1,4 +1,4 @@
-import "../scss/style.scss";
+import { api } from "/src/js/FetchWrapper.js";
 
 const form = document.querySelector("#form");
 const taskInput = document.querySelector(".input-text");
@@ -7,18 +7,16 @@ const tasksListDone = document.querySelector(".done-tasks");
 
 let tasksJSON = [];
 
-const API_URL = "https://5a06d2336f6db0ec.mokky.dev";
-
 async function fetchTasks() {
-    const resp = await fetch(`${API_URL}/tasks`);
-
-    if (resp.ok) {
-        const json = await resp.json();
-
-        return json;
-    } else {
-        alert("Не удалось получить задачи");
-        return [];
+    try {
+        const tasks = await api.get("/tasks");
+        return tasks;
+    } catch (error) {
+        if (error.message.includes("400")) {
+            throw new Error("Ошибка 400: Неверный запрос к серверу");
+        } else {
+            throw new Error("Не удалось получить задачи");
+        }
     }
 }
 
@@ -49,37 +47,60 @@ async function addTask(event) {
 
     taskInput.value = "";
 
-    const resp = await fetch(`${API_URL}/tasks`, {
-        method: "POST",
-        headers: {
-            Accept: "application/json",
-            "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ text }),
-    });
-
-    if (resp.ok) {
-        const newTask = await resp.json();
-
+    try {
+        const newTask = await api.post("tasks", { text });
         tasksJSON.push(newTask);
-
         renderTasks();
+    } catch (error) {
+        console.error("Ошибка в addTask:", error.message);
     }
 }
 
-function removeTask(event) {
-    if (event.target.dataset.action === "delete") {
-        const parentNode = event.target.closest(".task__item");
+async function removeTask(event) {
+    const deleteButton = event.target.closest('[data-action="delete"]');
+    if (deleteButton) {
+        const parentNode = deleteButton.closest(".task__item");
         if (parentNode) {
             const taskId = parentNode.id.replace("task-", "");
+            try {
+                await api.delete("tasks", taskId);
+                console.log("До фильтрации:", tasksJSON); // Логируем старый массив
+                tasksJSON = tasksJSON.filter((task) => task.id != taskId);
+                console.log("После фильтрации:", tasksJSON); // Логируем новый массив
+                renderTasks();
+            } catch (error) {
+                console.error("Ошибка при удалении задачи:", error.message);
+            }
+        }
+    }
+}
 
-            tasksJSON = tasksJSON.filter((task) => task.id !== taskId);
-
-            renderTasks();
-
-            fetch(`${API_URL}/tasks/${taskId}`, {
-                method: "DELETE",
-            });
+async function doneTask(event) {
+    const doneButton = event.target.closest('[data-action="done"]');
+    if (doneButton) {
+        const parentNode = doneButton.closest(".task__item");
+        if (parentNode) {
+            const taskId = parentNode.id.replace("task-", "");
+            const taskText =
+                parentNode.querySelector(".task__text").textContent;
+            parentNode.remove();
+            const taskHtml = `
+          <div class="task__item done-tasks">
+            <p class="task__text done-text">${taskText}</p>
+          </div>`;
+            tasksListDone.insertAdjacentHTML("beforeend", taskHtml);
+            try {
+                await api.delete("tasks", taskId);
+                console.log("До фильтрации:", tasksJSON);
+                tasksJSON = tasksJSON.filter((task) => task.id != taskId);
+                console.log("После фильтрации:", tasksJSON);
+                renderTasks();
+            } catch (error) {
+                console.error(
+                    "Ошибка при удалении выполненной задачи:",
+                    error.message
+                );
+            }
         }
     }
 }
@@ -87,30 +108,8 @@ function removeTask(event) {
 window.addEventListener("DOMContentLoaded", async () => {
     tasksJSON = await fetchTasks();
     renderTasks();
-
-    buttonAdd.addEventListener("click", addTask);
 });
 
 form.addEventListener("submit", addTask);
 tasksList.addEventListener("click", removeTask);
 tasksList.addEventListener("click", doneTask);
-
-function doneTask(event) {
-    if (event.target.dataset.action === "done") {
-        const parentNode = event.target.closest(".task__item");
-
-        if (parentNode) {
-            const taskText =
-                parentNode.querySelector(".task__text").textContent;
-
-            parentNode.remove();
-
-            const taskHtml = `
-                <div class="task__item done-tasks">
-                <p class="task__text done-text">${taskText}</p>
-                </div>`;
-
-            tasksListDone.insertAdjacentHTML("beforeend", taskHtml);
-        }
-    }
-}
