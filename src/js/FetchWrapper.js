@@ -23,6 +23,22 @@ class FetchWrapper {
       return response.json();
     }
   
+
+    async put(endpoint, id, data) {
+      const url = `${this.baseUrl}/${endpoint}/${id}`;
+      const response = await fetch(url, {
+        method: "PUT",
+        body: JSON.stringify(data),
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+      if (!response.ok) {
+        throw new Error("Ошибка обновления задачи");
+      }
+      return response.json();
+    }
+
     async delete(endpoint, id) {
       const url = `${this.baseUrl}/${endpoint}/${id}`;
       const response = await fetch(url, {

@@ -12,11 +12,7 @@ async function fetchTasks() {
         const tasks = await api.get("/tasks");
         return tasks;
     } catch (error) {
-        if (error.message.includes("400")) {
-            throw new Error("Ошибка 400: Неверный запрос к серверу");
-        } else {
-            throw new Error("Не удалось получить задачи");
-        }
+        throw new Error("Не удалось получить задачи");
     }
 }
 
@@ -53,6 +49,15 @@ async function addTask(event) {
         renderTasks();
     } catch (error) {
         console.error("Ошибка в addTask:", error.message);
+
+        
+        const errorMessage = document.querySelector(".error-message");
+        if (errorMessage) {
+            errorMessage.innerHTML = "Ошибка: Не удалось добавить задачу";
+            setTimeout(() => {
+                errorMessage.innerHTML = "";
+            }, 5000); 
+        }
     }
 }
 
@@ -64,9 +69,9 @@ async function removeTask(event) {
             const taskId = parentNode.id.replace("task-", "");
             try {
                 await api.delete("tasks", taskId);
-                console.log("До фильтрации:", tasksJSON); // Логируем старый массив
+                console.log("До фильтрации:", tasksJSON); 
                 tasksJSON = tasksJSON.filter((task) => task.id != taskId);
-                console.log("После фильтрации:", tasksJSON); // Логируем новый массив
+                console.log("После фильтрации:", tasksJSON); 
                 renderTasks();
             } catch (error) {
                 console.error("Ошибка при удалении задачи:", error.message);
@@ -81,33 +86,47 @@ async function doneTask(event) {
         const parentNode = doneButton.closest(".task__item");
         if (parentNode) {
             const taskId = parentNode.id.replace("task-", "");
-            const taskText =
-                parentNode.querySelector(".task__text").textContent;
-            parentNode.remove();
-            const taskHtml = `
-          <div class="task__item done-tasks">
-            <p class="task__text done-text">${taskText}</p>
-          </div>`;
-            tasksListDone.insertAdjacentHTML("beforeend", taskHtml);
+            const taskText = parentNode.querySelector(".task__text").textContent;
             try {
-                await api.delete("tasks", taskId);
-                console.log("До фильтрации:", tasksJSON);
-                tasksJSON = tasksJSON.filter((task) => task.id != taskId);
-                console.log("После фильтрации:", tasksJSON);
-                renderTasks();
-            } catch (error) {
-                console.error(
-                    "Ошибка при удалении выполненной задачи:",
-                    error.message
+                
+                await api.put("tasks", taskId, { text: taskText, done: true });
+                parentNode.remove();
+                const taskHtml = `
+                    <div class="task__item done-tasks">
+                        <p class="task__text done-text">${taskText}</p>
+                    </div>`;
+                tasksListDone.insertAdjacentHTML("beforeend", taskHtml);
+                tasksJSON = tasksJSON.map((task) =>
+                    task.id == taskId ? { ...task, done: true } : task
                 );
+                console.log("После обновления:", tasksJSON);
+            } catch (error) {
+                console.error("Ошибка при выполнении задачи:", error.message);
+                const errorMessage = document.querySelector(".error-message");
+                if (errorMessage) {
+                    errorMessage.innerHTML = "Ошибка: Не удалось отметить задачу как выполненную";
+                    setTimeout(() => {
+                        errorMessage.innerHTML = "";
+                    }, 5000);
+                }
             }
         }
     }
 }
 
+
+
+
+
+
 window.addEventListener("DOMContentLoaded", async () => {
-    tasksJSON = await fetchTasks();
-    renderTasks();
+    try {
+        tasksJSON = await fetchTasks();
+        renderTasks();
+    } catch (error) {
+        console.error("Ошибка при загрузке задач:", error.message);
+        
+    }
 });
 
 form.addEventListener("submit", addTask);
