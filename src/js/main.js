@@ -1,24 +1,28 @@
-import "../scss/style.scss";
-
-// Элементы на странице
+import { api } from "/src/js/FetchWrapper.js";
 
 const form = document.querySelector("#form");
 const taskInput = document.querySelector(".input-text");
 const tasksList = document.querySelector(".tasks");
 const tasksListDone = document.querySelector(".done-tasks");
 
-form.addEventListener("submit", addTask);
+let tasksJSON = [];
 
-tasksList.addEventListener("click", deleteTask);
+async function fetchTasks() {
+    try {
+        const tasks = await api.get("/tasks");
+        return tasks;
+    } catch (error) {
+        throw new Error("Не удалось получить задачи");
+    }
+}
 
-tasksList.addEventListener("click", doneTask);
+function renderTasks() {
+    let html = "";
 
-function addTask(event) {
-    event.preventDefault();
-    const taskText = taskInput.value;
-
-    const taskHtml = `<div class="task__item">
-          <p class="task__text">${taskText}</p>
+    tasksJSON.forEach((task) => {
+        const { id, text } = task;
+        html += `<div class="task__item" id="task-${id}">
+          <p class="task__text">${text}</p>
           <div class="btn-cont">
             <button data-action="done" class="task-btn"><svg width="18" height="13" viewBox="0 0 18 13" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M17.7851 1.67391L6.78513 12.6739C6.72128 12.7378 6.64546 12.7885 6.56199 12.8231C6.47853 12.8577 6.38907 12.8755 6.29872 12.8755C6.20837 12.8755 6.11891 12.8577 6.03545 12.8231C5.95199 12.7885 5.87617 12.7378 5.81232 12.6739L0.999816 7.86141C0.870813 7.7324 0.79834 7.55744 0.79834 7.375C0.79834 7.19256 0.870813 7.0176 0.999816 6.88859C1.12882 6.75959 1.30378 6.68712 1.48622 6.68712C1.66866 6.68712 1.84363 6.75959 1.97263 6.88859L6.29872 11.2155L16.8123 0.701094C16.9413 0.572091 17.1163 0.499619 17.2987 0.499619C17.4812 0.499619 17.6561 0.572091 17.7851 0.701094C17.9141 0.830097 17.9866 1.00506 17.9866 1.1875C17.9866 1.36994 17.9141 1.5449 17.7851 1.67391Z" fill="#9E78CF" />
@@ -28,36 +32,103 @@ function addTask(event) {
             </svg></button>
           </div>
         </div>`;
+    });
 
-    tasksList.insertAdjacentHTML("beforeend", taskHtml);
+    tasksList.innerHTML = html;
+}
+
+async function addTask(event) {
+    event.preventDefault();
+    const text = taskInput.value;
+
     taskInput.value = "";
-    taskInput.focus();
-}
 
-function deleteTask(event) {
-    if (event.target.dataset.action === "delete") {
-        const parentNode = event.target.closest(".task__item");
+    try {
+        const newTask = await api.post("tasks", { text });
+        tasksJSON.push(newTask);
+        renderTasks();
+    } catch (error) {
+        console.error("Ошибка в addTask:", error.message);
 
-        parentNode.remove();
-    }
-}
-
-function doneTask(event) {
-    if (event.target.dataset.action === "done") {
-        const parentNode = event.target.closest(".task__item");
-
-        if (parentNode) {
-            const taskText = parentNode.querySelector(".task__text").textContent;
-
-            parentNode.remove();
-
-            const taskHtml = `
-                <div class="task__item done-tasks">
-                <p class="task__text done-text">${taskText}</p>
-                </div>`;
-
-            tasksListDone.insertAdjacentHTML("beforeend", taskHtml);
+        
+        const errorMessage = document.querySelector(".error-message");
+        if (errorMessage) {
+            errorMessage.innerHTML = "Ошибка: Не удалось добавить задачу";
+            setTimeout(() => {
+                errorMessage.innerHTML = "";
+            }, 5000); 
         }
     }
 }
 
+async function removeTask(event) {
+    const deleteButton = event.target.closest('[data-action="delete"]');
+    if (deleteButton) {
+        const parentNode = deleteButton.closest(".task__item");
+        if (parentNode) {
+            const taskId = parentNode.id.replace("task-", "");
+            try {
+                await api.delete("tasks", taskId);
+                console.log("До фильтрации:", tasksJSON); 
+                tasksJSON = tasksJSON.filter((task) => task.id != taskId);
+                console.log("После фильтрации:", tasksJSON); 
+                renderTasks();
+            } catch (error) {
+                console.error("Ошибка при удалении задачи:", error.message);
+            }
+        }
+    }
+}
+
+async function doneTask(event) {
+    const doneButton = event.target.closest('[data-action="done"]');
+    if (doneButton) {
+        const parentNode = doneButton.closest(".task__item");
+        if (parentNode) {
+            const taskId = parentNode.id.replace("task-", "");
+            const taskText = parentNode.querySelector(".task__text").textContent;
+            try {
+                
+                await api.put("tasks", taskId, { text: taskText, done: true });
+                parentNode.remove();
+                const taskHtml = `
+                    <div class="task__item done-tasks">
+                        <p class="task__text done-text">${taskText}</p>
+                    </div>`;
+                tasksListDone.insertAdjacentHTML("beforeend", taskHtml);
+                tasksJSON = tasksJSON.map((task) =>
+                    task.id == taskId ? { ...task, done: true } : task
+                );
+                console.log("После обновления:", tasksJSON);
+            } catch (error) {
+                console.error("Ошибка при выполнении задачи:", error.message);
+                const errorMessage = document.querySelector(".error-message");
+                if (errorMessage) {
+                    errorMessage.innerHTML = "Ошибка: Не удалось отметить задачу как выполненную";
+                    setTimeout(() => {
+                        errorMessage.innerHTML = "";
+                    }, 5000);
+                }
+            }
+        }
+    }
+}
+
+
+
+
+
+
+window.addEventListener("DOMContentLoaded", async () => {
+    try {
+        tasksJSON = await fetchTasks();
+        renderTasks();
+    } catch (error) {
+        console.error("Ошибка при загрузке задач:", error.message);
+        
+    }
+});
+
+form.addEventListener("submit", addTask);
+tasksList.addEventListener("click", removeTask);
+tasksList.addEventListener("click", doneTask);
