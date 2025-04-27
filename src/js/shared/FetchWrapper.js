@@ -24,10 +24,10 @@ class FetchWrapper {
     }
   
 
-    async put(endpoint, id, data) {
+    async patch(endpoint, id, data) {
       const url = `${this.baseUrl}/${endpoint}/${id}`;
       const response = await fetch(url, {
-        method: "PUT",
+        method: "PATCH",
         body: JSON.stringify(data),
         headers: {
           "Content-Type": "application/json",
@@ -47,7 +47,7 @@ class FetchWrapper {
       if (!response.ok) {
         throw new Error(`Ошибка удаления: ${response.status}`);
       }
-      return response.status === 204 ? null : response.json();
+      if (response.status === 200) return null;
     }
   }
   
