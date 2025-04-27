@@ -4,10 +4,15 @@ export class TaskListStore {
   #tasks = [];
   #repository;
 
-  constructor() {
-    this.#repository = new TaskListRepository();
+  constructor(repository) {
+    if(!(repository instanceof TaskListRepository)) {
+      throw new Error("Ожидаем таск лист репозитори");
+    }
+    this.#repository = repository;
   }
 
+
+  
   async fetchTasks() {
     this.#tasks = await this.#repository.fetchTasks();
     return this.#tasks;

@@ -1,13 +1,9 @@
 import { api } from "../shared/FetchWrapper.js";
 
+
 export class TaskListRepository {
 async fetchTasks() {
-    try {
-        return await api.get("/tasks");
-    }
-    catch (error) {
-        throw new Error("нет задач");
-    }
+    return await api.get("/tasks");
 }
 
 
